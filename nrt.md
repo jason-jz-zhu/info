@@ -1,3 +1,153 @@
+flowchart LR
+  subgraph Sources
+    ADM[(ADM CDC)]
+    DDM[(DDM CDC)]
+    STC[(STC Site Data)]
+  end
+
+  subgraph Ingest
+    KC[Kafka Connect / DMS / Deequ CDC]
+    K[Kafka / Kinesis\nmulti-topic, partitioned]
+    SR[(Schema Registry)]
+  end
+
+  subgraph StreamProc["Real-time Processing"]
+    P1[Flink / Spark Structured Streaming\nSTC Goat, Channel Overwrite, Agg]
+    P2[Feature & Joins Layer\nApp_ID & External ID joins]
+    DQ[Great Expectations / Deequ\nRealtime DQ and metrics]
+    SS[(DynamoDB state store\nTTL, upsert, dedupe)]
+  end
+
+  subgraph Storage["Data Lake & Serving"]
+    S3r[(S3 Raw)]
+    S3b[(S3 Bronze)]
+    S3s[(S3 Silver)]
+    OL[OneLake Delta]
+    CDL[(Curated Data Layer\nCDL Delta)]
+    PV[PV Processor + Ingestion\nDelta tables]
+  end
+
+  subgraph Outputs["Downstream Delivery"]
+    SNS[(SNS / Kinesis fanout)]
+    Splunk[(Splunk Observability)]
+    Dash[BI Dashboards\nOneLake/Delta live]
+    API[[Low-latency APIs\nFastAPI / Lambda]]
+  end
+
+  ADM --> KC --> K
+  DDM --> KC --> K
+  STC --> KC --> K
+  K -->|avro/parquet + schemas| SR
+  K --> P1 --> P2 --> SS
+  P2 -->|good events| DQ --> S3r
+  DQ -->|metrics| Splunk
+  S3r --> S3b --> S3s --> OL
+  P2 -->|PV events| PV --> OL
+  OL --> CDL --> Dash
+  P2 --> SNS
+  P2 --> API
+
+
+# Future Streaming Workflow
+
+## Stage-by-Stage Details
+
+### 1. Source capture (near-real-time)
+- **ADM, DDM, STC** captured via CDC (Debezium/DMS/Kafka Connect) with **idempotent keys** (`App_ID`, External ID).
+- Publish to **Kafka (or Kinesis)** topics per domain (e.g., `adm.events`, `ddm.events`, `stc.pageview`).
+
+### 2. Contracts & schemas
+- Enforce **Protobuf/Avro** with a **Schema Registry**; versioned, backward-compatible.
+- Add **data contracts** (required fields, PII tags, semantic rules).
+
+### 3. Streaming backbone
+- Kafka/Kinesis with **partitions** keyed by `App_ID` (join locality) + **compaction** for changelog topics.
+- **Retention**: 3–7 days hot, 30 days compacted (ops playbook for replay).
+
+### 4. Real-time processing layer
+- **Flink** (preferred for exactly-once + native Kinesis) or **Spark Structured Streaming** (Glue/Spark on EMR).
+- Operators:
+  - **STC Goat / Channel Overwrite** as incremental transforms.
+  - **Windowed joins** on `App_ID`/External ID (10–30-min sliding windows for late events; watermark = 2–6 hours).
+  - **Dedupe/upsert** using **DynamoDB state store** (keyed by `(App_ID, event_ts_bucket)`), with **TTL** for hot state.
+  - **Feature calc** for PV / risk (FICO/LOB) as stateless or keyed state operators.
+
+### 5. Data quality in-stream
+- **Great Expectations/Deequ** checks inline: schema conformance, null %, domain sets, join completeness, late data rate.
+- **Side-output** bad records to `*-deadletter` topics and **S3 Raw**; push metrics to **Splunk** dashboards.
+
+### 6. Lake write pattern
+- **Delta Lake/Apache Hudi/Iceberg** sink with **exactly-once** semantics.
+- **Medallion**: S3 **Raw → Bronze → Silver**, then **OneLake Delta** for curated.
+- Compact small files with **OPTIMIZE** (Z-order on `App_ID`, `event_date`).
+
+### 7. PV pipeline
+- Dedicated **PV Preprocess → PV Processor → PV Ingestion** stream jobs write **Delta tables** in **OneLake** (hourly rolling compaction).
+- A **PV DQ Metric** job aggregates per hour/day for BA team KPIs.
+
+### 8. Serving & fan-out
+- **SNS/Kinesis** fan-out channels for near-real-time consumers (risk, LOB, marketing).
+- **Low-latency API** (Lambda/FastAPI behind API GW) reads **Delta Live Tables** or **DynamoDB materialized views** for sub-100 ms queries.
+- **Dashboards** read **CDL** in OneLake (business-owned).
+
+### 9. Monitoring & ops
+- **End-to-end SLAs**: ingest < **1 min**, transform < **3–5 min**, curated in OneLake < **10–15 min**.
+- **Exactly-once**: transactional sinks, idempotent writers, checkpointing (Flink savepoints/Spark checkpoints).
+- **Retry & replay**: DLQ replay tooling, topic rewind to watermark.
+- **Cost controls**: autoscaling (KDA/Flink), compaction windows, tiered storage.
+
+### 10. Security & governance
+- Row/column-level policies (Lakehouse ACLs), **tokenization** for PII at ingest, **key vault** integration.
+- **Lineage** (OpenLineage/Marquez) from source → topic → job → table.
+- **Access**: producer/consumer IAM per domain; CI-guardrails for schemas.
+
+---
+
+## Topic & Table Blueprint (Example)
+
+| Domain   | Stream Topic     | Key            | SLA     | Sink Table (Delta)                         | Notes                |
+|----------|------------------|----------------|---------|--------------------------------------------|----------------------|
+| ADM CDC  | `adm.events.v1`  | `App_ID`       | <1 min  | `bronze_adm_events` → `silver_adm_entities`| Debezium upserts     |
+| DDM CDC  | `ddm.events.v1`  | `App_ID`       | <1 min  | `bronze_ddm_events` → `silver_ddm_entities`| Enrich joins         |
+| STC Site | `stc.pageview.v1`| `App_ID`       | <30 sec | `silver_stc_pageview`                      | High-volume PV       |
+| PV Facts | `pv.facts.v1`    | `App_ID`       | <3 min  | `oneLake.pv_facts_delta`                   | Post-processor output|
+| DQ Bad   | `dq.bad.v1`      | `(topic,offset)`| n/a    | `raw_dq_bad_records`                       | Replayable DLQ       |
+| Metrics  | `dq.metrics.v1`  | date/hour      | n/a     | `dq_hourly_metrics`                        | Splunk charting      |
+
+---
+
+## Why This Will Work Better
+
+- **Low latency** with replay safety: streaming joins + state store + Delta transactional sinks.  
+- **Clean separation**: raw capture, processing, serving (medallion) → simpler governance & backfills.  
+- **First-class DQ**: quality is computed in-stream and visible in Splunk; bad data quarantined & replayable.  
+- **Scalable fan-out**: SNS/Kinesis enables new consumers without re-wiring the core pipeline.  
+- **BI-ready**: OneLake/CDL holds curated Delta for business dashboards, aligned with your current flow.  
+
+---
+
+## Actionable Next Steps
+
+1. Stand up **Schema Registry** + contract checks in CI for `adm/ddm/stc`.  
+2. Create **Kafka/Kinesis topics**, partition plan, and retention policy.  
+3. Build the **Flink** (or **Spark**) jobs for:
+   - STC Goat/Channel Overwrite  
+   - PV Processor (preprocess → facts)  
+   - DQ side-output + metrics  
+4. Configure **Delta/Hudi/Iceberg** sinks + compaction jobs; wire to **OneLake/CDL**.  
+5. Provision **DynamoDB** for state store (PK=`app_id#bucket`, TTL=7–14 days).  
+6. Publish **Splunk** dashboards: end-to-end latency, bad-row rate, watermark lag.  
+7. Add **SNS/Kinesis** fan-out and one pilot **consumer** (risk or marketing).  
+
+
+
+
+
+
+
+
+
+
 Requirements for Capital One’s AdTech Pipeline
 
 Designing a streaming architecture for Capital One’s marketing data must meet the following requirements:
