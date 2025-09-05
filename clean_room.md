@@ -1,3 +1,16 @@
+# One-Pager: Data Clean Room Comparison — Advertising Measurement
+Privacy-safe data collaboration is critical for advertising measurement. Capital One and partners leverage clean room technologies to securely analyze campaign effectiveness, attribution, and cross-platform reach without exposing personal data. This document compares AWS Clean Rooms, Snowflake Data Clean Rooms, and Meta Advanced Analytics for marketing data workflows.
+| **Dimension** | **AWS Clean Rooms** | **Snowflake Data Clean Rooms** | **Meta Measurement Solutions** |
+|---------------|----------------------|--------------------------------|--------------------------------|
+| **Link** | [AWS Clean Rooms Docs](https://aws.amazon.com/clean-rooms/) | [Snowflake Clean Rooms Docs](https://docs.snowflake.com/en/user-guide/data-clean-rooms.html) | [Meta Measurement Solutions](https://www.facebook.com/business/measurement) |
+| **Summary** | Cloud-managed service for multi-party collaboration; SQL/PySpark queries; differential privacy; supports ML models. | Native Snowflake feature for secure data sharing; easy partner onboarding; prebuilt templates and Marketplace datasets. | Meta’s privacy-safe measurement platform; focused on lift, attribution, reach/frequency within Meta ecosystem using PETs (e.g., MPC). |
+| **Key Capabilities** | Custom analytics, predictive modeling (Clean Rooms ML), multi-cloud support, integrations with Comscore/VideoAmp/LiveRamp. | Audience overlap & segmentation templates, attribution models, ROI analysis, direct activation to ad platforms. | Predefined Meta-focused analytics: lift studies, attribution, funnel/path-to-purchase, cross-device reach. |
+| **Governance & Privacy** | Encryption at rest/in-transit, IAM access rules, CloudTrail audit logs, differential privacy for anonymization. | Aggregation/projection policies, invite-only access, logging, region controls; inherits Snowflake certifications. | Strict Meta-controlled governance; only aggregated outputs; PETs (MPC, differential privacy, noise/thresholds). |
+| **Best Use Case** | Flexible cross-partner collaborations; advertisers with strong tech teams who want custom analytics. | Fast, governed setup for companies already using Snowflake; quick partner onboarding and activation. | Measuring Meta campaign ROI; advertisers needing turnkey lift/attribution metrics without raw data access. |
+| **Limitations** | Technical setup required (SQL/PySpark); limited marketer-friendly UI; costs rise with heavy usage. | Limited to Snowflake ecosystem; partners must be on-boarded; compute costs scale with usage. | Locked to Meta ecosystem; no cross-platform analysis; limited flexibility; access restricted mainly to larger advertisers. |
+
+
+
 # Data Clean Room Comparison — Advertising Measurement
 
 | **Dimension** | **AWS Clean Rooms (AWS)** | **Snowflake Data Clean Rooms (Snowflake)** | **Meta Advanced Analytics (Meta)** |
