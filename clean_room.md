@@ -1,3 +1,33 @@
+https://docs.aws.amazon.com/service-authorization/latest/reference/list_awscleanrooms.html
+https://docs.aws.amazon.com/clean-rooms/latest/apireference/API_Operations.html
+
+
+| Category                        | API Action                                             | Description                                                             |
+|---------------------------------|--------------------------------------------------------|-------------------------------------------------------------------------|
+| Data Configuration and Management | cleanrooms:BatchGetCollaborationAnalysisTemplate       | Retrieves multiple collaboration analysis templates in a batch.          |
+| Data Configuration and Management | cleanrooms:BatchGetSchemaAnalysisRule                  | Retrieves multiple schema analysis rules in a batch.                     |
+| Data Configuration and Management | cleanrooms:DeleteIdMappingTable                        | Deletes an ID mapping table.                                             |
+| Data Configuration and Management | cleanrooms:GetIdMappingTable                           | Retrieves details of an ID mapping table.                                |
+| Data Configuration and Management | cleanrooms:ListIdMappingTables                         | Lists ID mapping tables in a collaboration.                              |
+| Data Configuration and Management | cleanrooms:UpdateIdMappingTable                        | Updates an existing ID mapping table.                                    |
+| Data Configuration and Management | cleanrooms:DeleteIdNamespaceAssociation                | Deletes an ID namespace association.                                     |
+| Data Configuration and Management | cleanrooms:GetIdNamespaceAssociation                   | Retrieves details of an ID namespace association.                        |
+| Data Configuration and Management | cleanrooms:ListIdNamespaceAssociations                 | Lists ID namespace associations in a collaboration.                      |
+| Data Configuration and Management | cleanrooms:UpdateIdNamespaceAssociation                | Updates an existing ID namespace association.                            |
+| Data Configuration and Management | cleanrooms:CreateConfiguredAudienceModelAssociation    | Creates a configured audience model association.                         |
+| Data Configuration and Management | cleanrooms:GetConfiguredAudienceModelAssociation       | Retrieves details of a configured audience model association.            |
+| Data Configuration and Management | cleanrooms:ListConfiguredAudienceModelAssociations     | Lists configured audience model associations.                            |
+| Data Configuration and Management | cleanrooms:UpdateConfiguredAudienceModelAssociation    | Updates an existing configured audience model association.               |
+| Data Configuration and Management | cleanrooms:DeleteConfiguredAudienceModelAssociation    | Deletes a configured audience model association.                         |
+| Query and Analysis               | cleanrooms:GetCollaborationAnalysisTemplate             | Retrieves details of an analysis template shared in a collaboration.     |
+| Query and Analysis               | cleanrooms:ListCollaborationAnalysisTemplates           | Lists analysis templates available in a collaboration.                   |
+| Privacy Budget and Monitoring    | cleanrooms:ListCollaborationPrivacyBudgetTemplates      | Lists privacy budget templates in a collaboration.                       |
+| Tagging                          | cleanrooms:TagResource                                 | Adds tags to a Clean Rooms resource.                                     |
+| Tagging                          | cleanrooms:UntagResource                               | Removes tags from a Clean Rooms resource.                                |
+| Tagging                          | cleanrooms:ListTagsForResource                         | Lists the tags applied to a Clean Rooms resource.                        |
+
+
+
 # One-Pager: Data Clean Room Comparison — Advertising Measurement
 
 | **Dimension** | **AWS Clean Rooms** | **Snowflake Data Clean Rooms** | **Meta Measurement Solutions** |
