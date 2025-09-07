@@ -1,0 +1,75 @@
+# Multi-Touch Attribution (MTA) — Practical Guide
+
+## 1) What MTA Is
+**Multi-Touch Attribution (MTA)** allocates conversion credit across **all** touchpoints in a user journey (ads, email, search, social, etc.). You can use:
+- **Rule-based models**: last-click, first-click, linear, time-decay, U/W-shaped (fast to launch, can be biased).
+- **Data-driven models**: Markov chains (removal effect), Shapley/Harsanyi (marginal contribution), or ML-based methods (more realistic, needs better data & compute).
+
+> Why this matters: upper-funnel media (e.g., display/video) often drives branded search and direct visits later. MTA helps you avoid over-crediting the final touch.
+
+---
+
+## 2) Five Decisions to Lock Down
+1. **Touchpoint scope** — Clicks only, or include *viewable impressions* and *time-in-view*?
+2. **Conversion definition** — Purchase, app activation, qualified lead, store visit, etc.
+3. **Lookback window** — e.g., 7/14/30 days; consider different windows by channel.
+4. **Debiasing** — Handle brand terms separately, dedupe rapid repeats, anti-fraud, cross-device identity.
+5. **Validation** — Run geo/A-B incrementality tests and reconcile MTA with MMM for budget decisions.
+
+---
+
+## 3) Real-World, Already-Deployed Examples
+
+### A. Google Ads → Data-Driven Attribution (DDA) as default
+- Google moved to **Data-Driven Attribution as the default** model for new conversions and later streamlined legacy rules-based models.
+- Helpful docs:
+  - Google Ads announcements: “data-driven attribution is the default.”  
+    https://support.google.com/google-ads/announcements/9048695?hl=en
+  - Google Ads Help: “first click, linear, time decay, and position-based models are no longer supported.”  
+    https://support.google.com/google-ads/answer/6259715?hl=en
+
+### B. Adobe (off-the-shelf algorithmic attribution)
+- Adobe Analytics & Customer Journey Analytics document an algorithm based on the **Harsanyi Dividend** (a generalization of Shapley) for algorithmic attribution.
+- Official docs:
+  - Adobe Analytics — Algorithmic Attribution  
+    https://experienceleague.adobe.com/en/docs/analytics/analyze/analysis-workspace/attribution/algorithmic
+  - Adobe CJA — Attribution Panel / Algorithmic Attribution  
+    https://experienceleague.adobe.com/en/docs/analytics-platform/using/cja-workspace/panels/attribution
+    https://experienceleague.adobe.com/en/docs/analytics-platform/using/cja-workspace/attribution/algorithmic
+
+### C. Automotive case study (Markov-based MTA)
+- A published whitepaper applies **Markov-chain MTA** to multi-channel automotive marketing and shows how removal effects guide media optimization.
+- Read:
+  - OneMagnify overview page  
+    https://www.onemagnify.com/media/multi-touch-attribution-a-case-study-in-automotive-media-optimisation
+  - Direct PDF (whitepaper)  
+    https://23133471.fs1.hubspotusercontent-na1.net/hubfs/23133471/White%20Papers/om-white-paper-AMA-multi-touch-attribution-automotive-media-optimization.pdf
+
+---
+
+## 4) Why Data-Driven Beats Last-Click
+- **Last-click** over-rewards the final touchpoint.
+- **Markov** estimates each channel’s *removal effect* (how conversion probability drops if a channel is removed).
+- **Shapley/Harsanyi** splits credit by each channel’s *marginal contribution* across all path permutations.
+- Net result: better alignment with true influence, especially when upper-funnel channels seed demand that later converts via branded search.
+
+---
+
+## 5) Starter Workflow (teams can adopt quickly)
+1. **Baseline** — Run a simple **time-decay** model to verify data quality and sanity-check channel ordering.
+2. **Data-driven** — Add **Markov (removal effect)** and/or **Shapley/Harsanyi** on path-level data; sample/parallelize if paths are huge.
+3. **Validate** — Use **geo/A-B experiments** on key channels; feed incremental lift back as priors/constraints.
+4. **Budgeting** — Align findings with **MMM** for cross-channel ROI and spend reallocation.
+5. **Governance** — Respect privacy (ATT/ITP), use consented IDs/aggregate modeling, and maintain repeatable pipelines.
+
+---
+
+## 6) Handy GA/Adobe References
+- GA4: Attribution models report  
+  https://support.google.com/analytics/answer/10596865?hl=en
+- GA4: Select/change attribution settings  
+  https://support.google.com/analytics/answer/10597962?hl=en  
+  https://support.google.com/analytics/answer/16291112?hl=en
+- Adobe: Attribution components & settings (Harsanyi Dividend noted in several docs)  
+  https://experienceleague.adobe.com/en/docs/analytics/analyze/analysis-workspace/attribution/models  
+  https://experienceleague.adobe.com/en/docs/analytics-platform/using/cja-dataviews/component-settings/attribution
