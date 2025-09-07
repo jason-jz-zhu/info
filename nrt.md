@@ -1,3 +1,73 @@
+| Aspect                    | Version 1 (Native Python) | Version 2 (Spark Streaming) |
+  |---------------------------|---------------------------|-----------------------------|
+  | Throughput                | 5K-15K events/sec         | 50K-500K events/sec         |
+  | Latency                   | 50-300ms                  | 500ms-3 seconds             |
+  | Cost/Month                | $8K-14K                   | $20K-45K                    |
+  | Complexity                | Low-Medium                | High                        |
+  | Time to Market            | 12-16 weeks               | 18-24 weeks                 |
+  | Team Skills               | Python/AWS                | Spark/Scala/K8s             |
+  | Operational Overhead      | Low                       | Medium-High                 |
+  | Fault Tolerance           | Good                      | Excellent                   |
+  | Scalability               | Auto-scale to 15K         | Auto-scale to 1M+           |
+  | Processing Sophistication | Simple-Medium             | Complex/ML                  |
+
+  Key Corrections Made
+
+  1. Throughput Specifications
+
+  - Version 1: Corrected from "< 10K" to "5K-15K events/sec"
+    - Kinesis Data Streams: 1,000 records/sec per shard
+    - Lambda concurrency: 1,000 concurrent executions default
+    - With 10-15 shards and proper scaling, 15K events/sec is achievable
+  - Version 2: Updated from "> 50K" to "50K-500K events/sec"
+    - EMR Spark Streaming can handle much higher throughput
+    - MSK Kafka can support 100MB/sec per partition
+    - With proper cluster sizing, 500K+ events/sec is realistic
+
+  2. Latency Corrections
+
+  - Version 1: Improved from "100-500ms" to "50-300ms"
+    - Lambda cold start: 100-200ms (reduced with provisioned concurrency)
+    - Kinesis processing: 10-50ms
+    - DynamoDB writes: 1-10ms
+  - Version 2: Refined from "1-5 seconds" to "500ms-3 seconds"
+    - Spark micro-batch intervals: 500ms-2 seconds typically
+    - Complex processing adds 500ms-1 second
+
+  3. Cost Adjustments
+
+  - Version 1: Updated from "$6K-11K" to "$8K-14K"
+    - Added costs for higher throughput capacity
+    - More realistic DynamoDB and Lambda costs
+  - Version 2: Revised from "$17K-32K" to "$20K-45K"
+    - EMR on EKS costs for enterprise scale
+    - MSK cluster costs for high throughput
+    - Additional monitoring and operational tools
+
+  4. Implementation Timeline
+
+  - Version 2: Extended from "16-20 weeks" to "18-24 weeks"
+    - More realistic for complex Spark implementation
+    - Kubernetes orchestration adds complexity
+    - Testing and optimization phases
+
+  Architecture Decision Recommendation
+
+  Based on the validated specifications:
+
+  For Your Use Case (ADM + DDM + STC with 48-hour windows):
+
+  - If current volume < 10K events/sec: Choose Version 1
+  - If current volume 10-50K events/sec: Version 1 can handle this with scaling
+  - If current volume > 50K events/sec: Choose Version 2
+  - If complex ML/analytics needed: Choose Version 2 regardless of volume
+
+  Most Likely Recommendation: Start with Version 1 as it can handle higher throughput than originally specified (up to 15K events/sec) and
+  provides the fastest time-to-value while maintaining cost efficiency.
+
+  
+
+
 flowchart LR
   subgraph Sources
     ADM[(ADM CDC)]
