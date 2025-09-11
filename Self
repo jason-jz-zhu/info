@@ -1,0 +1,309 @@
+# 📘 Technical Design Document  
+**Self-Service Data Collaboration & Activation Platform (Reusable, Codeless Capability)**
+
+---
+
+## 1. Problem Statement & Objectives
+
+### Pain Points
+- Business teams struggle to contribute data because current processes are:
+  - **Engineering-heavy** (require scripts, ETL code, API knowledge)
+  - **Manual and siloed** (spreadsheets via email, ad-hoc imports)
+  - **Non-governed** (no approvals, no audit trail)
+- Data often lacks standardization and quality before reaching pipelines, leading to rework, errors, and delays.
+
+### Objectives
+- Allow business users to **easily onboard new datasets without code**.
+- Provide a **structured, governed workflow** from submission → review → activation.
+- **Reduce engineering burden** on ad-hoc ingestion tasks.
+- Ensure all contributed data is **high quality, standardized, and auditable** before use.
+
+---
+
+## 2. Goals
+
+| Term          | Goal                                                                                                                                             |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Short-term** | • Stand up a working platform for business users to submit and review data  <br>• Provide visual transformation tools and validation rules <br>• Integrate with 1–2 pilot pipelines |
+| **Long-term**  | • Expand to cross-domain use cases (AdTech, Risk, Analytics, etc.) <br>• Enable reusable rules/templates for common data types <br>• Fully self-service: no-code, real-time validation, approvals, automated publishing <br>• Robust governance and auditability |
+
+---
+
+## 3. Current State
+
+- Users send CSV/Excel via email or shared folders
+- Engineers manually clean, validate, and ingest into data lakes
+- No version control, audit log, or governance
+- Limited reuse — every ingestion is bespoke
+- Long lead time (days/weeks) from user data submission to availability in pipelines
+
+---
+
+## 4. Solution Architecture (Codeless Self-Service Platform)
+
+### High-Level Flow
+**Data Ingestion UI**
+- Drag-and-drop upload, form-based templates
+- Schema autodetection, format validation, PII scan
+
+**Data Transformation & Enrichment Studio**
+- Visual column mapping, type conversion, calculated fields
+- Reusable transformation recipes/templates
+- Built-in profiling (null %, unique count, etc.)
+
+**Review & Approval Workflow**
+- Peer or admin review
+- Commenting, change requests
+- Version control and approval status tracking
+
+**Publishing / Activation Layer**
+- Publish approved data to designated data lake paths, APIs, or tables
+- Optionally trigger downstream pipelines (marketing, analytics, etc.)
+
+**Governance & Logging**
+- Full audit trail of all user actions
+- Role-based access, dataset tagging, and lineage tracking
+
+### Technical Characteristics
+- Microservices-based
+- React/TypeScript front-end (visual studio)
+- Backend: Python/Java services for validation, metadata store (Postgres/Neo4j), data lake (S3/GCS), orchestration (Airflow)
+- APIs for downstream pipelines to subscribe to approved datasets
+
+---
+
+## 5. Use Cases (AdTech Examples)
+
+- **Audience Segmentation Upload**  
+  Marketing team uploads customer list with demographics, system validates, enriches, and publishes to audience DB for targeting.
+
+- **Campaign Metadata Submission**  
+  Media team submits campaign details (budget, channels, creatives) which get validated, approved, and pushed to the campaign config store.
+
+- **3rd-Party Data Vendor Feeds**  
+  Partner data files (device graph, location data) onboarded via no-code UI, reviewed by data governance team, then activated for enrichment pipelines.
+
+---
+
+## 6. What Industry Best Looks Like
+
+| Platform                    | Capabilities                                                           | Notes                                |
+|------------------------------|-----------------------------------------------------------------------|---------------------------------------|
+| **Segment**                  | Visual source setup, schema detection, transformations, tracking plan enforcement | Great UI for onboarding events/data  |
+| **RudderStack**               | Source-destination mapping, warehouse sync, consent tracking            | Open source, developer-friendly      |
+| **Adobe Experience Platform** | Drag-and-drop dataflows, schema registry, data governance, real-time profiles | Strong enterprise-grade governance   |
+| **Atlan / Collibra**            | Data catalog + workflows, approvals, lineage                                | Strong governance but less transformation UI |
+
+**Key Trends**
+- Visual data prep, schema auto-detection
+- Reusable transformation templates
+- Approval workflows and lineage tracking
+- Integration APIs for activation
+
+---
+
+## 7. Existing Platform Evaluation
+
+**Current Gaps**
+- Manual, engineer-driven ingestion → No self-service
+- No standardized schema enforcement
+- No review/approval workflow
+- No versioning, audit, or lineage
+- Long time-to-activation (days/weeks)
+
+**Implication**
+Business cannot rapidly contribute data, and engineering is a bottleneck.
+
+**Additional Observations**
+- Process inefficiency: Each new dataset requires custom ETL
+- Governance gaps: No visibility, no data ownership defined
+- Scalability: Cannot handle multiple datasets or users concurrently
+- Technical debt: High maintenance, low extensibility
+
+---
+
+## 8. Personas & Stakeholder Journey
+
+**Personas**
+- **Business User (Marketer/Analyst)** — Upload data, transform with visual tools, submit for approval
+- **Data Steward (Reviewer)** — Validate schema & quality, approve or reject submissions
+- **Platform Engineer/Architect** — Maintain infrastructure, create templates, manage downstream integrations
+
+**Journey**
+1. Upload dataset  
+2. Validate schema  
+3. Apply transformations  
+4. Submit for review  
+5. Reviewer approves  
+6. System publishes  
+7. Downstream consumption
+
+---
+
+## 9. User Experience Flows
+
+**Key Flows**
+- **Upload:** Drag-and-drop → schema auto-detect → validation errors shown → field editing
+- **Transform:** Visual mapping, deduplication, calculated fields, enrichment joins
+- **Review:** Approver sees data preview, comments, approves/rejects
+- **Publish:** User selects destination (lake table, Snowflake schema, API), triggers automation
+
+---
+
+## 10. Data Governance & Compliance
+
+- RBAC (Uploader, Reviewer, Admin)
+- Dataset classification tags (PII, PCI, Confidential)
+- Automated PII detection & masking
+- Immutable versioning and change history
+- Lineage tracking: upstream sources and downstream usage
+- Retention policies with auto-archival
+- Compliance alignment (GDPR, CCPA, SOC2)
+
+---
+
+## 11. KPIs & Success Metrics
+
+- Avg time from upload to publish
+- Number of datasets onboarded/month
+- % onboarded without engineering support
+- Validation pass rate
+- Platform uptime and SLA adherence
+- Engineering hours saved
+
+---
+
+## 12. Non-Functional Requirements
+
+**Performance**
+- UI response < 2s
+- Validation < 1min (1M rows)
+- Publish < 15min end-to-end
+
+**Scalability**
+- 100+ concurrent users
+- 1000+ datasets/month
+
+**Reliability**
+- 99.9% uptime
+- RTO < 1h, RPO < 15m
+
+**Extensibility**
+- Pluggable transformations
+- Configurable schema templates
+
+**Security**
+- SSO, encryption in transit/at rest
+
+---
+
+## 13. Integration Strategy
+
+**Flow**
+- Publish to curated data lake (S3/GCS)
+- Sync curated data to warehouse (Snowflake/BigQuery) via Airflow
+- Optionally push to event bus (Kafka/EventBridge)
+- Register dataset in catalog (schema, owner, lineage)
+- Downstream teams access via APIs or warehouse queries
+
+---
+
+## 14. Implementation Roadmap
+
+**Phase 1 – MVP**
+- Upload UI, transformation studio, approval workflow
+- Manual publish to pilot pipeline
+
+**Phase 2 – Scale**
+- Reusable templates & schema registry
+- API-based publishing
+- Monitoring, lineage tracking
+
+**Phase 3 – Enterprise**
+- Multi-domain onboarding
+- SLA enforcement & observability
+- Catalog/privacy integration
+
+---
+
+## 15. Risks & Mitigations
+
+| Risk                     | Impact            | Mitigation                                |
+|----------------------------|------------------|---------------------------------------------|
+| Low data quality            | Delays, rework         | Enforce schema, auto validations           |
+| Reviewer bottlenecks         | Blocked pipelines      | SLAs, auto-approval for low-risk            |
+| Security/privacy gaps         | Regulatory risk         | RBAC, encryption, PII scan                  |
+| Change resistance            | Low adoption            | Training, champions, phased rollout         |
+| Scope creep                   | Delays                    | Strict backlog and governance               |
+
+---
+
+## 16. Security & Compliance
+
+- Authentication: SSO (Okta/Azure AD)
+- Authorization: RBAC
+- Encryption: TLS + AES-256
+- PII scanning on upload
+- Immutable audit logs
+- GDPR/CCPA alignment
+- SOC2 controls
+
+---
+
+## 17. Architecture Operational Model
+
+**Roles & RACI**
+- Platform team: L2/L3 support, infra, upgrades
+- Data stewards: approvals and data quality
+- Business users: data submission
+
+**Support Model**
+- Ticket-based support
+- SLAs (response, resolution)
+
+**Monitoring**
+- Airflow DAG success/failure
+- Validation error rates
+- User activity metrics
+
+**Deployment**
+- CI/CD pipelines, staging → prod promotion
+
+---
+
+## 18. Cost & TCO Analysis
+
+**Build**
+- Dev team (UI, backend, orchestration)
+- Infra (S3, compute, Postgres, Airflow)
+
+**Buy**
+- Atlan, Collibra, Adobe Experience Platform
+- License + integration cost
+
+**ROI**
+- Engineering hours saved
+- Faster campaign launches → revenue gain
+- Reduced operational overhead
+
+---
+
+## 19. Migration & Change Management Plan
+
+- Inventory current ingestion flows
+- Parallel run old and new systems
+- Training and documentation
+- Gradual onboarding by domain
+- Enforce use of new platform for all new datasets
+
+---
+
+## 20. Glossary & Appendix
+
+**Glossary**
+- Dataset, schema, transformation, lineage, activation, curated zone
+
+**Appendix**
+- Architecture diagrams
+- Decision logs (build vs buy, chosen stack)
+- References and compliance requirements
