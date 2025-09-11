@@ -78,11 +78,73 @@ Consumption-based pricing aligns cost with usage and supports budgeting across c
 3. Technical Implementation Areas of Assessment
 3.1 Data Ingestion and Preparation
 
-Source Connectivity
-Integrates natively with S3, Glue Catalog, Redshift; supports Snowflake or external partners via S3.
+📥 Ingestion Sources
 
-Data Preparation
-Requires pre-hashed join keys (e.g., SHA-256) and column-level pruning before exposure.
+S3 Buckets + Glue Data Catalog
+
+Most common pattern; register Glue tables that reference S3 parquet/CSV datasets.
+
+Redshift / Snowflake / External Data Lakes
+
+Export and land into S3 before registering as configured tables.
+
+Structured, Semi-structured Data
+
+CSV, JSON, Parquet supported; schemas defined in Glue.
+
+📝 Note: Data is not copied into Clean Rooms. It stays in the data owner’s account and is only queried via references.
+
+🧮 Data Preparation Steps
+
+1. Data Selection & Pruning
+
+Choose only the minimum required fields needed for the collaboration use case.
+
+Exclude sensitive PII unless absolutely required (and if used, apply anonymization).
+
+2. Join Key Generation & Hashing
+
+If you need to join data across partners:
+
+Generate deterministic hashed join keys (e.g., SHA-256 with a salt).
+
+Store join keys in a new column (e.g. hashed_customer_id) and remove the original identifiers from the dataset.
+
+Configure a Join Key Policy in the collaboration requiring hashed keys.
+
+3. Schema Standardization
+
+Ensure consistent formats for common fields across participants:
+
+IDs: consistent length/format
+
+Dates: ISO 8601
+
+Numeric precision: standardized scale
+
+Add these schemas to the Glue Data Catalog for discovery and versioning.
+
+4. Sensitive Data Tagging & Governance
+
+Use Lake Formation tags to mark sensitive columns and control access.
+
+Only columns explicitly allowed will be queryable in Clean Rooms.
+
+5. Quality & Cleansing
+
+Deduplicate data using deterministic keys or ML-based entity resolution.
+
+Validate for missing values, schema mismatches, and outlier patterns.
+
+Apply address/phone/email normalization if needed for analytics joins.
+
+6. Versioning & Change Control
+
+Treat configured table schemas as immutable contracts.
+
+Manage changes using Git-style version control for Glue table definitions.
+
+Implement an approval workflow for any schema changes impacting collaborations.
 
 Data Quality and Standardization
 Deduplicate and normalize data (addresses, phones, IDs) upstream; tag sensitive fields for governance.
