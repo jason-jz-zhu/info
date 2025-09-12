@@ -150,155 +150,102 @@ Business cannot rapidly contribute data, and engineering is a bottleneck.
 
 ---
 
-## 10. Data Governance & Compliance
+## 10. 🛡️ Governance, Security & Compliance
 
+**Purpose:** Ensure data trust, accountability, and regulatory alignment.
+
+### Data Governance
 - RBAC (Uploader, Reviewer, Admin)
 - Dataset classification tags (PII, PCI, Confidential)
-- Automated PII detection & masking
-- Immutable versioning and change history
-- Lineage tracking: upstream sources and downstream usage
+- Automated PII detection, masking, and redaction
+- Immutable version history of each dataset
+- Lineage tracking (upstream sources → downstream consumers)
 - Retention policies with auto-archival
-- Compliance alignment (GDPR, CCPA, SOC2)
+
+### Security & Compliance
+- SSO (Okta, Azure AD) and MFA
+- TLS in transit, AES-256 encryption at rest
+- Audit logging for every user action
+- GDPR / CCPA / SOC2 compliance alignment
+- Regular security reviews and privacy audits
+
+### Operational Governance
+- Data ownership assignment (dataset owner metadata)
+- Reviewer accountability logs
+- Approval SLA enforcement
+- Monitoring dashboards for data quality and pipeline health
 
 ---
 
-## 11. KPIs & Success Metrics
+## 11. 📈 Platform Performance & Delivery
 
-- Avg time from upload to publish
-- Number of datasets onboarded/month
-- % onboarded without engineering support
-- Validation pass rate
+**Purpose:** Define how the platform must perform, scale, and be delivered.
+
+### Non-Functional Requirements
+- **Performance:** UI response < 2s; Validation < 1 min for 1M-row files; Publish < 15 min end-to-end
+- **Scalability:** 100+ concurrent users; 1000+ datasets/month
+- **Reliability:** 99.9% uptime; RTO < 1h, RPO < 15m
+- **Extensibility:** Pluggable transformations; Configurable schema templates
+
+### Integration Strategy
+- Publish approved data to curated lake zones (S3/GCS)
+- Sync curated data into warehouses (Snowflake, BigQuery) via Airflow
+- Optionally push to event buses (Kafka, EventBridge)
+- Register all published datasets in data catalog with schema, owner, lineage
+- Provide APIs for downstream teams to consume approved datasets
+
+### Delivery Plan
+- **Phase 1 – MVP:** Upload UI, transformation studio, approval workflow, manual publish to pilot
+- **Phase 2 – Scale:** Schema registry, reusable templates, API-based publishing, monitoring, lineage
+- **Phase 3 – Enterprise:** Multi-domain onboarding, SLA enforcement, observability, catalog/privacy integration
+
+### KPIs & Success Metrics
+- Time from upload to publish
+- # of datasets onboarded/month
+- % of datasets onboarded without engineering support
+- Validation pass rate / data quality score
 - Platform uptime and SLA adherence
 - Engineering hours saved
 
 ---
 
-## 12. Non-Functional Requirements
+## 12. 💰 Operations, Cost & Change Management
 
-**Performance**
-- UI response < 2s
-- Validation < 1min (1M rows)
-- Publish < 15min end-to-end
+**Purpose:** Explain how the platform will run sustainably and be adopted successfully.
 
-**Scalability**
-- 100+ concurrent users
-- 1000+ datasets/month
+### Operational Model
+- **Roles & RACI**
+  - Platform team: L2/L3 support, infrastructure, upgrades
+  - Data stewards: review and approval
+  - Business users: self-serve ingestion
+- **Support Process**
+  - Ticket-based support with SLAs
+  - CI/CD for deployments and upgrades
+  - Monitoring of validation error rates, pipeline latency, user activity
 
-**Reliability**
-- 99.9% uptime
-- RTO < 1h, RPO < 15m
+### Risk Management
+| Risk                   | Impact               | Mitigation                               |
+|--------------------------|-----------------------|--------------------------------------------|
+| Low data quality            | Delays, rework       | Schema enforcement, automated validations |
+| Reviewer bottlenecks        | Blocked pipelines   | SLAs, auto-approval for low-risk datasets  |
+| Security/privacy gaps       | Regulatory risk     | RBAC, encryption, PII scanning             |
+| Change resistance            | Low adoption        | Training, champions, phased rollout        |
+| Scope creep                   | Delivery delays     | Strict backlog and governance              |
 
-**Extensibility**
-- Pluggable transformations
-- Configurable schema templates
+### Cost & TCO
+- **Build:** Dev team (UI, backend, orchestration), infra (S3, compute, Postgres, Airflow)
+- **Buy:** Atlan, Collibra, Adobe Experience Platform (licenses + integration)
+- **ROI:** Engineering hours saved, faster campaign launches (higher revenue), lower operational overhead
 
-**Security**
-- SSO, encryption in transit/at rest
-
----
-
-## 13. Integration Strategy
-
-**Flow**
-- Publish to curated data lake (S3/GCS)
-- Sync curated data to warehouse (Snowflake/BigQuery) via Airflow
-- Optionally push to event bus (Kafka/EventBridge)
-- Register dataset in catalog (schema, owner, lineage)
-- Downstream teams access via APIs or warehouse queries
-
----
-
-## 14. Implementation Roadmap
-
-**Phase 1 – MVP**
-- Upload UI, transformation studio, approval workflow
-- Manual publish to pilot pipeline
-
-**Phase 2 – Scale**
-- Reusable templates & schema registry
-- API-based publishing
-- Monitoring, lineage tracking
-
-**Phase 3 – Enterprise**
-- Multi-domain onboarding
-- SLA enforcement & observability
-- Catalog/privacy integration
+### Migration & Change Plan
+- Inventory existing ingestion flows and users
+- Parallel run old and new systems for 1–2 months
+- Training sessions and help center content
+- Gradual enforcement of self-service platform for all new datasets
 
 ---
 
-## 15. Risks & Mitigations
-
-| Risk                     | Impact            | Mitigation                                |
-|----------------------------|------------------|---------------------------------------------|
-| Low data quality            | Delays, rework         | Enforce schema, auto validations           |
-| Reviewer bottlenecks         | Blocked pipelines      | SLAs, auto-approval for low-risk            |
-| Security/privacy gaps         | Regulatory risk         | RBAC, encryption, PII scan                  |
-| Change resistance            | Low adoption            | Training, champions, phased rollout         |
-| Scope creep                   | Delays                    | Strict backlog and governance               |
-
----
-
-## 16. Security & Compliance
-
-- Authentication: SSO (Okta/Azure AD)
-- Authorization: RBAC
-- Encryption: TLS + AES-256
-- PII scanning on upload
-- Immutable audit logs
-- GDPR/CCPA alignment
-- SOC2 controls
-
----
-
-## 17. Architecture Operational Model
-
-**Roles & RACI**
-- Platform team: L2/L3 support, infra, upgrades
-- Data stewards: approvals and data quality
-- Business users: data submission
-
-**Support Model**
-- Ticket-based support
-- SLAs (response, resolution)
-
-**Monitoring**
-- Airflow DAG success/failure
-- Validation error rates
-- User activity metrics
-
-**Deployment**
-- CI/CD pipelines, staging → prod promotion
-
----
-
-## 18. Cost & TCO Analysis
-
-**Build**
-- Dev team (UI, backend, orchestration)
-- Infra (S3, compute, Postgres, Airflow)
-
-**Buy**
-- Atlan, Collibra, Adobe Experience Platform
-- License + integration cost
-
-**ROI**
-- Engineering hours saved
-- Faster campaign launches → revenue gain
-- Reduced operational overhead
-
----
-
-## 19. Migration & Change Management Plan
-
-- Inventory current ingestion flows
-- Parallel run old and new systems
-- Training and documentation
-- Gradual onboarding by domain
-- Enforce use of new platform for all new datasets
-
----
-
-## 20. Glossary & Appendix
+## 13. Glossary & Appendix
 
 **Glossary**
 - Dataset, schema, transformation, lineage, activation, curated zone
