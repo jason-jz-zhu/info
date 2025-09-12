@@ -1,0 +1,35 @@
+Query & Analysis
+
+Are there any query limits, such as row-level restrictions, aggregation thresholds, or differential privacy constraints?
+
+How are join keys matched across participants (e.g. hashed join keys, salted hashing)?
+
+Are there built-in analysis templates or reusable query modules provided by Meta? Currently, I only see two templates (Lift and Match Rate) — are there more available?
+
+What levels of data granularity can we access from Meta’s clean room (aggregated data only, or other levels as well)?
+
+Data Structure & Operations
+
+What are the table structures or schemas that Meta will share, and how will the data be organized when put into AWS Clean Room?
+
+What levels of operations are supported in AWS Clean Room (aggregation, list, custom queries, etc.)?
+
+Does Meta support hashed ID mapping between Meta’s dataset and our dataset?
+
+Meta will not run any queries directly on our dataset, correct? (We plan to also add restrictions on our tables.)
+
+Data Ingestion & Quality
+
+When Meta performs data ingestion or preparation, what data validation and quality checks are applied during ingestion?
+
+How frequently will the data be refreshed by Meta within their clean room?
+
+Access & Permissions
+
+After we provide the necessary information to Meta, how long does it usually take for Meta to accept and activate our invitation to collaborate?
+
+In the results delivery setup, Meta requires selecting both Meta and the COF as viewers — can we choose to make the results visible only to ourselves?
+
+Privacy & Differential Privacy
+
+We noticed AWS Clean Room currently requires turning off differential privacy to proceed — do we know when Meta will support differential privacy in their clean room solution?
