@@ -1,0 +1,193 @@
+# Engineering Review Document — Clickstream Medallion (Batch)
+
+**Author:** <your name>  
+**Reviewers:** Data Eng, Analytics, Platform Sec, FinOps  
+**Version:** v1.0 (2025-09-18)  
+**Code Refs:** `clickstream-pipeline/` (glue_jobs/, dq/, infra/)  
+**Environments:** dev → stage → prod
+
+---
+
+## 1) Executive Summary
+
+We will deliver a **daily batch** clickstream pipeline at **~1B events/day** with **~50M unique SIDs/day**.
+
+- **Silver layer**: store **daily aggregations by business attributes** (device desktop/mobile, card pages, channel, etc.).  
+- **Gold layer**: compute **windowed rollups** (7/30/90/365 days) **from Silver** (e.g., `DesktopLoginLast7Days`).  
+- **AWS-native**: S3 + **Apache Iceberg** (Glue Catalog), **EMR Serverless / AWS Glue Spark** for batch, **Step Functions** orchestration, **Athena** (optional **Redshift Serverless**) for serving.  
+- **Security**: Lake Formation, KMS encryption, private networking.  
+- **Reliability**: late-data tolerance **2 days (configurable)**, idempotent MERGEs, DLQ, audit.  
+- **SLA**: Gold published by **10:00 UTC** daily.
+
+**ERD Diagram (PNG):** [Download](sandbox:/mnt/data/clickstream_erd.png)
+
+---
+
+## 2) Goals & Success Criteria
+
+- Produce **daily Silver facts** and **Gold windowed facts** meeting documented metric definitions.  
+- Daily success rate ≥ **99.9%**; deterministic re-runs by date range.  
+- “Last 7/30/90/365 days” queries return in seconds (P95).  
+- PII handled per policy; role-based access.
+
+---
+
+## 3) Scope
+
+**In scope**
+- Bronze ingestion (two source tables; see §6.1)  
+- Silver daily aggregation by attributes (your design)  
+- Gold windowed rollups (your design)  
+- Data quality checks, lineage/audit, DLQ  
+- Cost, security, performance guardrails
+
+**Out of scope (v1)**
+- Real-time/streaming  
+- Sub-second OLAP store (Pinot/ClickHouse)  
+- Cross-domain joins beyond clickstream + attributes from source
+
+---
+
+## 4) Non-Functional Requirements (NFRs)
+
+- **Throughput:** ≥1B events/day; +20% headroom  
+- **SLA:** Gold ready by **10:00 UTC**  
+- **Late data tolerance:** **2 days** (config via `--late_days`), see §7.3  
+- **Security:** S3 SSE-KMS (CMKs), Lake Formation policies, VPC endpoints  
+- **Reliability:** idempotent writes (Iceberg MERGE), DLQ, replayable by date  
+- **Cost:** compaction schedule, file size targets, Athena workgroup limits  
+- **Observability:** CloudWatch metrics/alarms, DQ dashboards, audit tables
+
+---
+
+## 5) High-Level Architecture (AWS)
+
+- **Storage/Catalog:** S3 data lake; **Iceberg** tables in **AWS Glue Data Catalog**; Parquet  
+- **Compute:** **EMR Serverless** (preferred) or **AWS Glue Spark**  
+- **Orchestration:** **EventBridge** (cron) → **Step Functions** (Map/Retry) → Jobs J1..J5  
+- **Serving:** **Athena** for ad-hoc; **Redshift Serverless** (optional) external Iceberg tables  
+- **Governance:** **Lake Formation** for authZ; **CloudTrail** audit
+
+---
+
+## 6) Data Model
+
+### 6.1 Bronze (raw — exactly two tables)
+
+- **`bronze_events`**  
+  Columns (subset):  
+  `session_id, ts, dt, event_type, url, page_id, device_type, channel, user_agent, ip, attrs MAP<STRING,STRING>`
+
+- **`bronze_session_profile`**  
+  Columns:  
+  `session_id, dpid, resolved_ts, dt`  
+  > If available, use effective dating: `start_ts, end_ts` to support point-in-time joins.
+
+### 6.2 Dimension Attributes (from source; **no separate dim tables**)
+
+We treat these as plain columns throughout Silver/Gold:
+
+- `device_type` (desktop/mobile/tablet)  
+- `page_id` (normalized page key; implies page category/card type where applicable)  
+- `channel` (e.g., direct, organic, email, paid_search)  
+- (Optional if present in source) `country`, `browser_family`, etc.
+
+### 6.3 Silver — Daily Fact (your design)
+
+- **Grain:**  
+  `(dpid, dt, device_type, page_id, channel, metric_name) → metric_value`
+- **Columns:**  
+  `dpid, dt, device_type, page_id, channel, metric_name, metric_value, event_count, last_event_ts, data_version, ingested_at, run_id`
+- **Partition:** `dt`  
+- **Sort (Iceberg):** `(dpid, page_id, channel)`  
+- **MERGE key (idempotent):** `(dpid, dt, device_type, page_id, channel, metric_name)`
+
+### 6.4 Gold — Windowed Fact (your design)
+
+- **Grain:**  
+  `(dpid, asof_dt, device_type, page_id, channel, window_days, metric_name) → metric_value`
+- **Windows:** `7, 30, 90, 365` (extensible)  
+- **Partition:** `asof_dt, window_days`  
+- **Sort (Iceberg):** `(dpid, metric_name)`  
+- **MERGE key:** `(dpid, asof_dt, device_type, page_id, channel, window_days, metric_name)`
+
+### 6.5 Metrics Dictionary (governs `metric_name`)
+
+Small control table (or YAML) that **defines** each `metric_name` so everyone computes it the same way.
+
+| metric_name              | selection_logic (pseudo)                              | owner         | version |
+| ---                      | ---                                                    | ---           | ---     |
+| `Logins`                 | `event_type='login'`                                  | Identity      | 1       |
+| `PageVisits`             | `event_type='page_view'`                               | Web Analytics | 1       |
+| `BusinessCardPageVisits` | `event_type='page_view' AND page_id IN (...card...)`  | Cards         | 1       |
+| `ApplicationVisits`      | `event_type='page_view' AND page_id LIKE '/apply%'`   | Growth        | 1       |
+
+---
+
+## 7) Pipeline Design (Bronze → Silver → Gold)
+
+### 7.1 Join Strategy (two Bronze tables → Silver)
+
+**Goal:** resolve `dpid` from `session_id` **before** aggregating, without shuffling 1B rows.
+
+**Approach (recommended): Pre-aggregate by session, then join map**
+
+1. **Pre-agg per session**  
+   Group `bronze_events` by  
+   `session_id, dt, device_type, page_id, channel, metric_name` → `metric_value`, `last_event_ts`.
+2. **Join to `bronze_session_profile`**  
+   - Use last `late_days` for both tables.  
+   - De-dupe to one DPID per session using **survivorship**:  
+     **authenticated > inferred; latest `resolved_ts`; tiebreaker = max(dpid)**.  
+   - Broadcast if small; else repartition both sides by `session_id`.
+3. **Roll up to Silver grain**  
+   Group by `(dpid, dt, device_type, page_id, channel, metric_name)`; **SUM** values; **MERGE** into Silver.
+
+> If no DPID found, set `dpid='UNKNOWN'` and track **coverage KPI** (`rows_with_dpid / total_rows`).
+
+### 7.2 Silver → Gold (windows)
+
+**What Gold represents:** for `asof_dt = D` and `window_days = W`,  
+`Gold = SUM(Silver.metric_value) for dt in (D − W, …, D]` per key `(dpid, device_type, page_id, channel, metric_name)`.
+
+Two compute options:
+
+- **Method A — Cumulative sums (flexible):**  
+  Compute `cum_value` per key ordered by `dt`; then `value_W(D) = cum(D) − cum(D−W)`.  
+  Supports any window with one pass.
+
+- **Method B — Incremental roll (fast steady-state):**  
+  `gold_W(D) = gold_W(D−1) + silver(D) − silver(D−W)`; reads only two days of Silver.
+
+Both write via **MERGE** into `gold_window_agg`.
+
+**Tiny numeric example**  
+Silver for user A, desktop `/login`, metric `Logins`:
+- 2025-09-12: 1  
+- 2025-09-15: 2  
+- 2025-09-17: 1
+
+As of **D = 2025-09-18**, **7-day window** sums dt in (Sep-11..Sep-18] = `1 + 2 + 1 = 4`.
+
+### 7.3 Late-Data Tolerance (2 days; configurable)
+
+- Each daily run for `run_dt = D` **reprocesses** Silver for `dt ∈ [D−late_days … D]` (default **2**).  
+- This **corrects prior days’ totals** when late events arrive (e.g., events of `dt=2025-09-17` arriving on `2025-09-18`).  
+- After Silver is corrected, recompute Gold for `asof_dt = D`.  
+- Set via `--late_days=N`. Larger `N` increases cost but reduces manual backfills.
+
+> Appending only “today’s” Silver does **not** fix yesterday’s totals; windows are sums of **business dates**, not arrival dates.
+
+---
+
+## 8) Job Topology (Glue/EMR) & Orchestration
+
+**Jobs (modular):**
+- **J1 Bronze→Silver:** pre-agg by session → join map → roll up → Silver MERGE  
+- **J2 Silver Compaction:** Iceberg rewrite/compaction for new `dt` partitions  
+- **J3 Silver→Gold:** compute windows (7/30/90/365) → MERGE  
+- **J4 Gold Compaction:** weekly compaction  
+- **J5 Data Quality & Publish:** Deequ/GE checks, refresh materialized views  
+- **J6 (optional) Backfill:** same code as J1/J3 with `start_dt,end_dt`
+
+**Step Functions (daily):**
