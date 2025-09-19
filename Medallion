@@ -582,3 +582,6 @@ TBLPROPERTIES (
   'write.target-file-size-bytes'='536870912'
 );
 
+if ~10% of 50M dpids are active/day (5M users), each with ~5 dim combos × ~4 metrics → ~100M Silver rows/day, which is very reasonable for a lakehouse (especially with partitioning + compaction).
+
+If you truly must minimize rows, you can drop a dim (e.g., omit channel) from Silver and compute it ad-hoc later—but you’ll sacrifice some precision/perf.
