@@ -1,0 +1,63 @@
+from pyspark.sql import functions as F
+
+# ---- 1. Basic Summary ----
+df.printSchema()
+df.show(5)
+df.cache()
+
+print(f"Total records: {df.count()}")
+
+# ---- 2. Null Value Check ----
+null_summary = df.select([
+    F.sum(F.col(c).isNull().cast("int")).alias(c)
+    for c in df.columns
+])
+print("Null value counts:")
+null_summary.show(truncate=False)
+
+# ---- 3. Duplicate Check ----
+dup_count = df.count() - df.dropDuplicates().count()
+print(f"Duplicate rows: {dup_count}")
+
+# ---- 4. Data Type Validation ----
+# Example: ensure page_url_id and event_count are integers, and event_date is a valid date
+type_check = df.select(
+    F.col("page_url_id").cast("int").isNotNull().alias("page_url_id_valid"),
+    F.col("event_count").cast("int").isNotNull().alias("event_count_valid"),
+    F.col("event_date").cast("date").isNotNull().alias("event_date_valid")
+)
+print("Type validation summary:")
+type_check.agg(
+    *[F.sum(F.col(c).cast("int")).alias(c + "_valid_count") for c in type_check.columns]
+).show()
+
+# ---- 5. Range & Value Validation ----
+range_issues = df.filter(
+    (F.col("event_count") < 0) |
+    (F.col("session_page_duration_seconds") < 0)
+)
+print("Invalid (negative) counts or durations:")
+range_issues.show(5)
+
+# ---- 6. Boolean and Enum Validation ----
+# Check unexpected platform_type or login_flag values
+platform_values = df.select("platform_type").distinct()
+print("Distinct platform_type values:")
+platform_values.show()
+
+login_flag_issues = df.filter(~F.col("login_flag").isin([True, False]))
+print("Invalid login_flag values:")
+login_flag_issues.show()
+
+# ---- 7. Date Logic Validation ----
+# Ensure run_date >= event_date
+invalid_dates = df.filter(F.col("run_date") < F.col("event_date"))
+print("Invalid date logic (run_date before event_date):")
+invalid_dates.show(5)
+
+# ---- 8. Data Completeness Score ----
+total_rows = df.count()
+non_null_counts = df.select([F.count(F.col(c)).alias(c) for c in df.columns]).collect()[0].asDict()
+completeness = {k: round(v / total_rows, 3) for k, v in non_null_counts.items()}
+print("Data completeness ratio per column:")
+print(completeness)
