@@ -1,0 +1,14 @@
+AWS Clean Rooms enables multiple parties to collaborate on shared analyses without exchanging or exposing raw data. Each participant controls their data through analysis rules, which dictate what kinds of queries can run. Two of the most common rule types are Aggregation and List. Aggregation rules permit only summary statistics such as COUNT, SUM, or AVG, protecting privacy by preventing row-level access. List rules, by contrast, allow row-level output but only for the intersection of records between collaborators—useful for matched audience or customer overlap scenarios.
+
+Aggregation Use Cases
+Aggregation rules support secure measurement and campaign analysis where results must remain anonymized. Queries can group by approved dimensions (for example, country or device_type) and must meet minimum-threshold constraints (like k-anonymity ≥ 100 users per cell). Example:
+
+SELECT country, COUNT(DISTINCT user_id) AS users, AVG(sessions) AS avg_sessions
+FROM partnerA a JOIN partnerB b ON a.hashed_email=b.hashed_email
+GROUP BY country;
+
+
+This pattern allows partners to measure reach or frequency safely without exposing individual identifiers.
+
+List Use Cases and Governance
+List rules are used when the output must include matched identifiers—for example, building activation audiences or running joint CRM programs. They explicitly restrict which join columns (e.g., hashed email) and output fields are permitted. AWS Clean Rooms automatically enforces these constraints, logs every query, and can apply Differential Privacy or Cryptographic Computing to add noise or keep data encrypted during computation. Together, Aggregation and List rules provide a controllable balance between analytic flexibility and privacy protection across multi-party collaborations.
