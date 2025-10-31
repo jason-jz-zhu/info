@@ -1,3 +1,48 @@
+Pricing is based on compute capacity, measured in CRPU-hours (Clean Rooms Processing Units) on a per-second basis, with a 60-second minimum charge. 
+Amazon Web Services, Inc.
++2
+noise.getoto.net
++2
+
+Standard Spark SQL compute cost in US East (N. Virginia) is ~US$2.00 per CRPU-hour. 
+Amazon Web Services, Inc.
+
+Enabling Differential Privacy adds an additional cost, making the total ~US$4.00 per CRPU-hour ($2.00 compute + $2.00 DP add-on). 
+Amazon Web Services, Inc.
+
+Example: if you use the default engine (32 CRPUs) and run a query for 0.1 hours (6 minutes):
+
+Capacity used = 32 × 0.1 = 3.2 CRPU-hours
+
+Cost = 3.2 × $2.00 = $6.40 for the job (without DP).
+
+Free Tier: New customers receive 9 CRPU-hours per month for the first 12 months (when using list or aggregation rules only). 
+Amazon Web Services, Inc.
++1
+
+Additional pricing dimensions beyond query compute:
+
+ML custom modeling: charged per million records processed + compute (CRPU-hours) + ML instance fees. 
+Amazon Web Services, Inc.
+
+Lookalike modeling: charged per 1,000 profiles generated. 
+Amazon Web Services, Inc.
+
+Storage costs (e.g., S3) and data transfer are separate and follow standard AWS rates; Clean Rooms compute charge is independent of data scanned volume. 
+AWS Documentation
+
+Tips to optimize cost:
+
+Choose minimal CRPU configuration that meets performance needs.
+
+Keep job run time short (e.g., <10 minutes where possible).
+
+Use Free Tier where initial experiments allow (<9 CRPU-hours/month).
+
+Track and attribute billing by collaborator member to avoid unexpected cost shifts.
+
+
+
 AWS Clean Rooms enables multiple parties to collaborate on shared analyses without exchanging or exposing raw data. Each participant controls their data through analysis rules, which dictate what kinds of queries can run. Two of the most common rule types are Aggregation and List. Aggregation rules permit only summary statistics such as COUNT, SUM, or AVG, protecting privacy by preventing row-level access. List rules, by contrast, allow row-level output but only for the intersection of records between collaborators—useful for matched audience or customer overlap scenarios.
 
 Aggregation Use Cases
